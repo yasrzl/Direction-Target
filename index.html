@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>YZ Siber Jambi - Direction Finder</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: #080c14;
+            color: #c8d6e5;
+            min-height: 100vh;
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+
+        /* === HEADER === */
+        .header {
+            background: linear-gradient(180deg, #0d1520 0%, #0a1018 100%);
+            padding: 12px 20px;
+            border-bottom: 1px solid #1a2a3a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00e5ff44, #00e5ff, #00e5ff44, transparent);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .brand-logo {
+            width: 36px;
+            height: 36px;
+            border: 2px solid #00e5ff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #00e5ff;
+            font-family: 'Share Tech Mono', monospace;
+            background: #00e5ff11;
+            text-shadow: 0 0 10px #00e5ff88;
+        }
+        .brand-text h1 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e8f0f8;
+            letter-spacing: 1px;
+            line-height: 1.1;
+        }
+        .brand-text span {
+            font-size: 0.6rem;
+            color: #00e5ff;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            font-family: 'Share Tech Mono', monospace;
+            color: #556;
+            padding: 5px 12px;
+            border: 1px solid #1a2a3a;
+            border-radius: 20px;
+            background: #0a1018;
+        }
+        .status .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #334;
+        }
+        .status.active { color: #00e5ff; border-color: #00e5ff44; }
+        .status.active .dot {
+            background: #00e5ff;
+            box-shadow: 0 0 8px #00e5ff;
+            animation: dotBlink 2s ease-in-out infinite;
+        }
+        @keyframes dotBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* === CONTAINER === */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 14px;
+        }
+
+        /* === INPUT CARD === */
+        .input-card {
+            background: linear-gradient(135deg, #0d1520, #111b28);
+            border: 1px solid #1a2a3a;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        .input-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00e5ff55, transparent);
+        }
+
+        .input-card label {
+            display: block;
+            color: #5a7a8a;
+            font-size: 0.7rem;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .input-row:last-child { margin-bottom: 0; }
+
+        .input-field {
+            flex: 1;
+            background: #080c14;
+            border: 1px solid #1a2a3a;
+            color: #e0e8f0;
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-family: 'Share Tech Mono', monospace;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .input-field:focus {
+            border-color: #00e5ff;
+            box-shadow: 0 0 15px #00e5ff15;
+        }
+        .input-field::placeholder { color: #2a3a4a; }
+
+        .btn-track {
+            background: linear-gradient(135deg, #00e5ff, #0099cc);
+            color: #080c14;
+            border: none;
+            padding: 12px 22px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: 'Rajdhani', sans-serif;
+            cursor: pointer;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .btn-track:hover { box-shadow: 0 0 20px #00e5ff44; }
+        .btn-track:active { transform: scale(0.97); }
+
+        .btn-reset {
+            background: none;
+            border: 1px solid #2a3040;
+            color: #556;
+            width: 44px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-reset:hover { border-color: #ff4444; color: #ff4444; }
+
+        .input-hint {
+            color: #2a3a4a;
+            font-size: 0.65rem;
+            margin-top: 6px;
+            font-family: 'Share Tech Mono', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        /* === NAV BUTTON === */
+        .btn-navigate {
+            display: none;
+            width: 100%;
+            background: linear-gradient(135deg, #1a2d1a, #1a3320);
+            border: 1px solid #2a5a2a;
+            color: #4ade80;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: 'Rajdhani', sans-serif;
+            cursor: pointer;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-navigate.show { display: flex; }
+        .btn-navigate:hover { box-shadow: 0 0 20px #4ade8033; background: linear-gradient(135deg, #1a3320, #1a4428); }
+        .btn-navigate svg { width: 20px; height: 20px; fill: #4ade80; }
+
+        /* === MAP === */
+        .map-container {
+            background: #0d1520;
+            border-radius: 14px;
+            border: 1px solid #1a2a3a;
+            overflow: hidden;
+            margin-bottom: 12px;
+            display: none;
+        }
+        .map-container.show { display: block; }
+
+        .map-bar {
+            background: linear-gradient(135deg, #0d1520, #111b28);
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1a2a3a;
+        }
+        .map-bar-title {
+            font-size: 0.75rem;
+            color: #5a7a8a;
+            font-family: 'Share Tech Mono', monospace;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .map-bar-data {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        .map-stat {
+            text-align: right;
+        }
+        .map-stat .val {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #00e5ff;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .map-stat .lbl {
+            font-size: 0.55rem;
+            color: #3a4a5a;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #map {
+            height: 50vh;
+            height: 50dvh;
+            width: 100%;
+        }
+
+        /* === DATA GRID === */
+        .data-grid {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .data-grid.show { display: grid; }
+
+        .data-card {
+            background: linear-gradient(135deg, #0d1520, #111b28);
+            border: 1px solid #1a2a3a;
+            border-radius: 12px;
+            padding: 12px 14px;
+            position: relative;
+            overflow: hidden;
+        }
+        .data-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 3px; height: 100%;
+        }
+        .data-card.target::before { background: #ff4444; }
+        .data-card.sector::before { background: #ff6b35; }
+        .data-card.user::before { background: #00e5ff; }
+        .data-card.accuracy::before { background: #a855f7; }
+
+        .data-card .dc-label {
+            font-size: 0.6rem;
+            color: #3a4a5a;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-family: 'Share Tech Mono', monospace;
+            margin-bottom: 4px;
+        }
+        .data-card .dc-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #c8d6e5;
+        }
+
+        /* === ALERT === */
+        .distance-alert {
+            display: none;
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #dc2626, #991b1b);
+            color: #fff;
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            z-index: 9999;
+            box-shadow: 0 4px 25px rgba(220,38,38,0.5);
+            animation: alertGlow 2s ease-in-out infinite;
+            text-align: center;
+            max-width: 90vw;
+            font-family: 'Share Tech Mono', monospace;
+            letter-spacing: 1px;
+            border: 1px solid #ef4444;
+        }
+        .distance-alert.show { display: block; }
+        @keyframes alertGlow {
+            0%, 100% { box-shadow: 0 4px 25px rgba(220,38,38,0.4); }
+            50% { box-shadow: 0 4px 35px rgba(220,38,38,0.7); }
+        }
+
+        /* === ERROR === */
+        .error-toast {
+            display: none;
+            background: #1a1018;
+            border: 1px solid #dc262644;
+            color: #ef4444;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            margin-bottom: 12px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .error-toast.show { display: block; }
+
+        /* === MARKERS === */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+        @keyframes pulse-dot {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .marker-target {
+            position: relative;
+            width: 44px; height: 44px;
+        }
+        .marker-target .icon {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 38px; height: 38px;
+        }
+        .marker-user {
+            position: relative;
+            width: 48px; height: 48px;
+        }
+        .marker-user .pulse1 {
+            position: absolute;
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            border: 2px solid #00e5ff;
+            animation: pulse-ring 2s ease-out infinite;
+        }
+        .marker-user .pulse2 {
+            position: absolute;
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            border: 2px solid #00e5ff;
+            animation: pulse-ring 2s ease-out infinite 0.7s;
+        }
+        .marker-user .glow {
+            position: absolute;
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,229,255,0.3) 0%, transparent 70%);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        .marker-user .icon {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px; height: 30px;
+        }
+
+        /* === SCROLLBAR === */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #080c14; }
+        ::-webkit-scrollbar-thumb { background: #1a2a3a; border-radius: 3px; }
+
+        /* === FOOTER === */
+        .footer {
+            text-align: center;
+            padding: 16px;
+            color: #1a2a3a;
+            font-size: 0.6rem;
+            font-family: 'Share Tech Mono', monospace;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Alert -->
+    <div class="distance-alert" id="distanceAlert">
+        &#9888; TARGET > 500M : <span id="alertDist"></span>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="brand">
+            <div class="brand-logo">YZ</div>
+            <div class="brand-text">
+                <h1>YZ SIBER JAMBI</h1>
+                <span>Direction Finder</span>
+            </div>
+        </div>
+        <div class="status" id="statusBadge">
+            <span class="dot"></span>
+            STANDBY
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Input -->
+        <div class="input-card">
+            <label>Koordinat / Link Map</label>
+            <div class="input-row">
+                <input type="text" class="input-field" id="inp-linkmap"
+                    placeholder="-6.xxxxx, 106.xxxxx">
+            </div>
+            <label>Cell ID (opsional)</label>
+            <div class="input-row">
+                <input type="text" class="input-field" id="inp-cid"
+                    placeholder="CID untuk sektor"
+                    onkeydown="if(event.key==='Enter') startTracking()">
+                <button class="btn-track" onclick="startTracking()">TRACK</button>
+                <button class="btn-reset" onclick="clearMap()" title="Reset">&#10005;</button>
+            </div>
+            <div class="input-hint">Google Maps URL atau langsung lat,long &bull; CID opsional untuk arsiran</div>
+        </div>
+
+        <!-- Error -->
+        <div class="error-toast" id="errorMsg"></div>
+
+        <!-- Navigate Button -->
+        <button class="btn-navigate" id="btnNavigate" onclick="navigateToTarget()">
+            <svg viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+            NAVIGASI KE TARGET
+        </button>
+
+        <!-- Map -->
+        <div class="map-container" id="mapArea">
+            <div class="map-bar">
+                <span class="map-bar-title">&#9678; Live Map</span>
+                <div class="map-bar-data">
+                    <div class="map-stat">
+                        <div class="val" id="mapDistance">-</div>
+                        <div class="lbl">Jarak</div>
+                    </div>
+                    <div class="map-stat">
+                        <div class="val" id="mapBearing">-</div>
+                        <div class="lbl">Arah</div>
+                    </div>
+                </div>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <!-- Data Grid -->
+        <div class="data-grid" id="dataGrid">
+            <div class="data-card target">
+                <div class="dc-label">Target</div>
+                <div class="dc-value" id="infoTarget">-</div>
+            </div>
+            <div class="data-card sector">
+                <div class="dc-label">Sektor</div>
+                <div class="dc-value" id="infoSektor">-</div>
+            </div>
+            <div class="data-card user">
+                <div class="dc-label">Posisi Anda</div>
+                <div class="dc-value" id="infoUser">Menunggu GPS...</div>
+            </div>
+            <div class="data-card accuracy">
+                <div class="dc-label">Akurasi</div>
+                <div class="dc-value" id="infoAccuracy">-</div>
+            </div>
+        </div>
+
+        <div class="footer">YZ SIBER JAMBI &bull; DIRECTION FINDER SYSTEM</div>
+    </div>
+
+    <script>
+        let mapInstance = null;
+        let targetLat = null, targetLng = null;
+        let userMarker = null, userAccuracyCircle = null, connectLine = null;
+        let watchId = null;
+        let firstLocUpdate = true;
+
+        // === SECTOR ===
+        function createSectorPolygon(lat, lng, bearingDeg, distanceKm) {
+            const points = [[lat, lng]];
+            const halfAngle = 60;
+            const startAngle = bearingDeg - halfAngle;
+            const endAngle = bearingDeg + halfAngle;
+            const steps = 30;
+            const R = 6371;
+            for (let i = 0; i <= steps; i++) {
+                const angle = startAngle + (endAngle - startAngle) * (i / steps);
+                const angleRad = angle * Math.PI / 180;
+                const latRad = lat * Math.PI / 180;
+                const lngRad = lng * Math.PI / 180;
+                const d = distanceKm / R;
+                const newLat = Math.asin(Math.sin(latRad)*Math.cos(d) + Math.cos(latRad)*Math.sin(d)*Math.cos(angleRad));
+                const newLng = lngRad + Math.atan2(Math.sin(angleRad)*Math.sin(d)*Math.cos(latRad), Math.cos(d)-Math.sin(latRad)*Math.sin(newLat));
+                points.push([newLat * 180 / Math.PI, newLng * 180 / Math.PI]);
+            }
+            points.push([lat, lng]);
+            return points;
+        }
+
+        function getSectorBearing(ciStr) {
+            if (!ciStr) return null;
+            const ci = ciStr.trim();
+            let sector;
+            try { sector = ci.length > 2 ? parseInt(ci[ci.length-1]) : parseInt(ci[0]); }
+            catch(e) { return null; }
+            if (isNaN(sector) || sector === 0) return null;
+            if ([1,4,7].includes(sector)) return 60;
+            if ([2,5,8].includes(sector)) return 180;
+            if ([3,6,9].includes(sector)) return 300;
+            return null;
+        }
+
+        // === PARSE ===
+        function parseCoords(linkmap) {
+            const patterns = [
+                /[?&]q=([-\d.]+),\s*([-\d.]+)/,
+                /@([-\d.]+),\s*([-\d.]+)/,
+                /\/([-\d.]+),\s*([-\d.]+)/,
+                /place\/([-\d.]+),\s*([-\d.]+)/,
+            ];
+            for (const pat of patterns) {
+                const m = linkmap.match(pat);
+                if (m) {
+                    const lat = parseFloat(m[1]), lng = parseFloat(m[2]);
+                    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180)
+                        return { lat, lng };
+                }
+            }
+            const direct = linkmap.match(/^([-\d.]+),\s*([-\d.]+)$/);
+            if (direct) {
+                const lat = parseFloat(direct[1]), lng = parseFloat(direct[2]);
+                if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90)
+                    return { lat, lng };
+            }
+            return null;
+        }
+
+        // === BEARING ===
+        function calcBearing(lat1, lng1, lat2, lng2) {
+            const dLng = (lng2-lng1)*Math.PI/180;
+            const la1 = lat1*Math.PI/180, la2 = lat2*Math.PI/180;
+            const y = Math.sin(dLng)*Math.cos(la2);
+            const x = Math.cos(la1)*Math.sin(la2) - Math.sin(la1)*Math.cos(la2)*Math.cos(dLng);
+            return (Math.atan2(y,x)*180/Math.PI + 360) % 360;
+        }
+
+        function bearingToCompass(deg) {
+            const dirs = ['U','U-TL','TL','T-TL','T','T-TG','TG','U-TG'];
+            return dirs[Math.round(deg/45)%8];
+        }
+
+        // === UI ===
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 5000);
+        }
+
+        function setStatus(text, active) {
+            const el = document.getElementById('statusBadge');
+            el.innerHTML = `<span class="dot"></span> ${text}`;
+            el.classList.toggle('active', active);
+        }
+
+        // === NAVIGATE ===
+        function navigateToTarget() {
+            if (targetLat === null) return;
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLng}&travelmode=driving`;
+            window.open(url, '_blank');
+        }
+
+        // === CLEAR ===
+        function clearMap() {
+            if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+            if (mapInstance) { mapInstance.remove(); mapInstance = null; }
+            userMarker = null; userAccuracyCircle = null; connectLine = null;
+            firstLocUpdate = true; targetLat = null; targetLng = null;
+
+            document.getElementById('mapArea').classList.remove('show');
+            document.getElementById('dataGrid').classList.remove('show');
+            document.getElementById('btnNavigate').classList.remove('show');
+            document.getElementById('distanceAlert').classList.remove('show');
+            setStatus('STANDBY', false);
+        }
+
+        // === START ===
+        function startTracking() {
+            const linkmap = document.getElementById('inp-linkmap').value.trim();
+            const cid = document.getElementById('inp-cid').value.trim();
+
+            if (!linkmap) { showError('Masukkan koordinat atau link map!'); return; }
+            const coords = parseCoords(linkmap);
+            if (!coords) { showError('Format tidak valid. Gunakan lat,long atau Google Maps URL'); return; }
+
+            clearMap();
+            targetLat = coords.lat;
+            targetLng = coords.lng;
+
+            // Show UI
+            document.getElementById('mapArea').classList.add('show');
+            document.getElementById('dataGrid').classList.add('show');
+            document.getElementById('btnNavigate').classList.add('show');
+            setStatus('TRACKING', true);
+
+            // Map
+            mapInstance = L.map('map', { zoomControl: false }).setView([targetLat, targetLng], 15);
+            L.control.zoom({ position: 'bottomright' }).addTo(mapInstance);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OSM'
+            }).addTo(mapInstance);
+
+            // Sector
+            const bearing = getSectorBearing(cid);
+            if (bearing !== null) {
+                const sectorCoords = createSectorPolygon(targetLat, targetLng, bearing, 0.5);
+                L.polygon(sectorCoords, {
+                    color: '#ff6b35', fillColor: '#ff6b35', fillOpacity: 0.2,
+                    weight: 2, dashArray: '6,4'
+                }).addTo(mapInstance).bindPopup(
+                    `<div style="font-family:monospace;font-size:12px;">
+                    <b style="color:#ff6b35;">SEKTOR ANTENA</b><br>
+                    CI: ${cid} | Sektor ${cid.length > 2 ? cid[cid.length-1] : cid[0]}<br>
+                    Bearing: ${bearing}&deg; | R: 500m</div>`
+                );
+                const R = 6371, d = 0.5/R;
+                const bRad = bearing*Math.PI/180, latR = targetLat*Math.PI/180, lngR = targetLng*Math.PI/180;
+                const eLat = Math.asin(Math.sin(latR)*Math.cos(d)+Math.cos(latR)*Math.sin(d)*Math.cos(bRad));
+                const eLng = lngR + Math.atan2(Math.sin(bRad)*Math.sin(d)*Math.cos(latR),Math.cos(d)-Math.sin(latR)*Math.sin(eLat));
+                L.polyline([[targetLat,targetLng],[eLat*180/Math.PI,eLng*180/Math.PI]],{
+                    color:'#ff6b35',weight:2,opacity:0.7
+                }).addTo(mapInstance);
+                document.getElementById('infoSektor').textContent = `CI ${cid} | ${bearing}\u00B0`;
+            } else {
+                document.getElementById('infoSektor').textContent = cid || '-';
+            }
+
+            // Target marker
+            const targetIcon = L.divIcon({
+                className: '',
+                html: `<div class="marker-target">
+                    <svg class="icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="32" cy="32" r="28" fill="#0d1520" stroke="#ff4444" stroke-width="3" opacity="0.95"/>
+                        <circle cx="32" cy="32" r="6" fill="#ff4444"/>
+                        <line x1="32" y1="2" x2="32" y2="18" stroke="#ff4444" stroke-width="2.5" stroke-linecap="round"/>
+                        <line x1="32" y1="46" x2="32" y2="62" stroke="#ff4444" stroke-width="2.5" stroke-linecap="round"/>
+                        <line x1="2" y1="32" x2="18" y2="32" stroke="#ff4444" stroke-width="2.5" stroke-linecap="round"/>
+                        <line x1="46" y1="32" x2="62" y2="32" stroke="#ff4444" stroke-width="2.5" stroke-linecap="round"/>
+                        <circle cx="32" cy="32" r="17" fill="none" stroke="#ff4444" stroke-width="1.5" opacity="0.4"/>
+                    </svg>
+                </div>`,
+                iconSize: [44,44], iconAnchor: [22,22]
+            });
+
+            L.marker([targetLat,targetLng],{icon:targetIcon}).addTo(mapInstance)
+                .bindPopup(`<div style="font-family:monospace;font-size:12px;"><b style="color:#ff4444;">TARGET</b><br>${targetLat.toFixed(6)}, ${targetLng.toFixed(6)}</div>`)
+                .openPopup();
+
+            document.getElementById('infoTarget').textContent = `${targetLat.toFixed(5)}, ${targetLng.toFixed(5)}`;
+
+            startGPS();
+            setTimeout(() => mapInstance.invalidateSize(), 200);
+        }
+
+        // === GPS ===
+        const userIconHtml = `<div class="marker-user">
+            <div class="pulse1"></div><div class="pulse2"></div><div class="glow"></div>
+            <svg class="icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="32" r="28" fill="#0a1628" stroke="#00e5ff" stroke-width="2.5" opacity="0.95"/>
+                <circle cx="32" cy="22" r="8" fill="#00e5ff"/>
+                <path d="M18 48 C18 36 46 36 46 48" fill="#00e5ff"/>
+            </svg>
+        </div>`;
+
+        function updateUserLocation(pos) {
+            if (!mapInstance) return;
+            const uLat = pos.coords.latitude, uLng = pos.coords.longitude;
+            const accuracy = pos.coords.accuracy || 50;
+
+            if (!userMarker) {
+                const userIcon = L.divIcon({ className:'', html:userIconHtml, iconSize:[48,48], iconAnchor:[24,24] });
+                userMarker = L.marker([uLat,uLng],{icon:userIcon,zIndexOffset:1000}).addTo(mapInstance);
+                userAccuracyCircle = L.circle([uLat,uLng],{
+                    radius:accuracy,color:'#00e5ff',fillColor:'#00e5ff',fillOpacity:0.06,weight:1
+                }).addTo(mapInstance);
+                connectLine = L.polyline([[targetLat,targetLng],[uLat,uLng]],{
+                    color:'#ffffff22',weight:2,dashArray:'8,8'
+                }).addTo(mapInstance);
+            } else {
+                userMarker.setLatLng([uLat,uLng]);
+                userAccuracyCircle.setLatLng([uLat,uLng]);
+                userAccuracyCircle.setRadius(accuracy);
+                connectLine.setLatLngs([[targetLat,targetLng],[uLat,uLng]]);
+            }
+
+            const dist = mapInstance.distance([targetLat,targetLng],[uLat,uLng]);
+            const distStr = dist > 1000 ? (dist/1000).toFixed(1)+' km' : Math.round(dist)+' m';
+            const brng = calcBearing(uLat,uLng,targetLat,targetLng);
+
+            document.getElementById('mapDistance').textContent = distStr;
+            document.getElementById('mapBearing').textContent = `${Math.round(brng)}\u00B0 ${bearingToCompass(brng)}`;
+            document.getElementById('infoUser').textContent = `${uLat.toFixed(5)}, ${uLng.toFixed(5)}`;
+            document.getElementById('infoAccuracy').textContent = `\u00B1${Math.round(accuracy)} m`;
+
+            const alertEl = document.getElementById('distanceAlert');
+            if (dist > 500) {
+                document.getElementById('alertDist').textContent = distStr;
+                alertEl.classList.add('show');
+            } else {
+                alertEl.classList.remove('show');
+            }
+
+            if (firstLocUpdate) {
+                firstLocUpdate = false;
+                mapInstance.fitBounds([[targetLat,targetLng],[uLat,uLng]],{padding:[50,50]});
+            }
+        }
+
+        function startGPS() {
+            if (!navigator.geolocation) {
+                document.getElementById('infoUser').textContent = 'GPS tidak tersedia';
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(updateUserLocation,
+                () => { document.getElementById('infoUser').textContent = 'GPS ditolak'; },
+                { enableHighAccuracy:true, timeout:10000 }
+            );
+            watchId = navigator.geolocation.watchPosition(updateUserLocation, ()=>{},
+                { enableHighAccuracy:true, maximumAge:3000 }
+            );
+        }
+    </script>
+</body>
+</html>
