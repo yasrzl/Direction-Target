@@ -432,7 +432,7 @@
 <body>
     <!-- Alert -->
     <div class="distance-alert" id="distanceAlert">
-        &#9888; TARGET > 500M : <span id="alertDist"></span>
+        &#9888; TARGET > 300M : <span id="alertDist"></span>
     </div>
 
     <!-- Header -->
@@ -672,7 +672,7 @@
                     `<div style="font-family:monospace;font-size:12px;">
                     <b style="color:#ff6b35;">SEKTOR ANTENA</b><br>
                     CI: ${cid} | Sektor ${cid.length > 2 ? cid[cid.length-1] : cid[0]}<br>
-                    Bearing: ${bearing}&deg; | R: 500m</div>`
+                    Bearing: ${bearing}&deg; | R: 300m</div>`
                 );
                 const R = 6371, d = 0.5/R;
                 const bRad = bearing*Math.PI/180, latR = targetLat*Math.PI/180, lngR = targetLng*Math.PI/180;
@@ -754,7 +754,7 @@
             document.getElementById('infoAccuracy').textContent = `\u00B1${Math.round(accuracy)} m`;
 
             const alertEl = document.getElementById('distanceAlert');
-            if (dist > 500) {
+            if (dist > 300) {
                 document.getElementById('alertDist').textContent = distStr;
                 alertEl.classList.add('show');
             } else {
