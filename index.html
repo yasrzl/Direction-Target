@@ -213,6 +213,98 @@ Note    : If you copy or modify this code,
             letter-spacing: 0.5px;
         }
 
+        /* === RUN BUTTON === */
+        .btn-run-row {
+            display: none;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .btn-run-row.show { display: flex; }
+
+        .btn-run {
+            flex: 1;
+            background: linear-gradient(135deg, #1a1a2d, #1a2033);
+            border: 1px solid #2a2a5a;
+            color: #a78bfa;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: 'Rajdhani', sans-serif;
+            cursor: pointer;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-run:hover { box-shadow: 0 0 20px #a78bfa33; }
+        .btn-run.active {
+            background: linear-gradient(135deg, #2d1a2d, #3a1a3a);
+            border-color: #a78bfa;
+            color: #c4b5fd;
+            box-shadow: 0 0 20px #a78bfa33;
+            animation: runPulse 2s ease-in-out infinite;
+        }
+        @keyframes runPulse {
+            0%, 100% { box-shadow: 0 0 15px #a78bfa22; }
+            50% { box-shadow: 0 0 25px #a78bfa44; }
+        }
+        .btn-run .run-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #a78bfa;
+        }
+        .btn-run.active .run-dot {
+            background: #c4b5fd;
+            box-shadow: 0 0 8px #a78bfa;
+            animation: dotBlink 1s ease-in-out infinite;
+        }
+
+        .btn-clear-trail {
+            background: none;
+            border: 1px solid #2a3040;
+            color: #556;
+            padding: 14px 18px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            font-family: 'Share Tech Mono', monospace;
+            cursor: pointer;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        .btn-clear-trail:hover { border-color: #ff6b35; color: #ff6b35; }
+
+        .trail-stats {
+            display: none;
+            background: linear-gradient(135deg, #0d1520, #111b28);
+            border: 1px solid #1a2a3a;
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            color: #5a7a8a;
+            justify-content: space-around;
+            text-align: center;
+        }
+        .trail-stats.show { display: flex; }
+        .trail-stats .ts-val {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #a78bfa;
+        }
+        .trail-stats .ts-lbl {
+            font-size: 0.55rem;
+            color: #3a4a5a;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
         /* === NAV BUTTON === */
         .btn-navigate {
             display: none;
@@ -491,6 +583,31 @@ Note    : If you copy or modify this code,
             NAVIGATION TO BTS
         </button>
 
+        <!-- Run Trail Button -->
+        <div class="btn-run-row" id="btnRunRow">
+            <button class="btn-run" id="btnRun" onclick="toggleTrail()">
+                <span class="run-dot"></span>
+                <span id="btnRunText">RUN - MULAI ARSIR JALAN</span>
+            </button>
+            <button class="btn-clear-trail" onclick="clearTrail()">HAPUS JEJAK</button>
+        </div>
+
+        <!-- Trail Stats -->
+        <div class="trail-stats" id="trailStats">
+            <div>
+                <div class="ts-val" id="trailDistance">0 m</div>
+                <div class="ts-lbl">Jarak Tempuh</div>
+            </div>
+            <div>
+                <div class="ts-val" id="trailPoints">0</div>
+                <div class="ts-lbl">Titik GPS</div>
+            </div>
+            <div>
+                <div class="ts-val" id="trailTime">00:00</div>
+                <div class="ts-lbl">Durasi</div>
+            </div>
+        </div>
+
         <!-- Map -->
         <div class="map-container" id="mapArea">
             <div class="map-bar">
@@ -538,6 +655,15 @@ Note    : If you copy or modify this code,
         let userMarker = null, userAccuracyCircle = null, connectLine = null;
         let watchId = null;
         let firstLocUpdate = true;
+
+        // === TRAIL ===
+        let trailRunning = false;
+        let trailPoints = [];
+        let trailPolyline = null;
+        let trailCircles = [];
+        let trailTotalDist = 0;
+        let trailStartTime = null;
+        let trailTimerInterval = null;
 
         // === SECTOR ===
         function createSectorPolygon(lat, lng, bearingDeg, distanceKm) {
@@ -641,9 +767,22 @@ Note    : If you copy or modify this code,
             userMarker = null; userAccuracyCircle = null; connectLine = null;
             firstLocUpdate = true; targetLat = null; targetLng = null;
 
+            // Reset trail
+            stopTrailTimer();
+            trailRunning = false;
+            trailPoints = [];
+            trailPolyline = null;
+            trailCircles = [];
+            trailTotalDist = 0;
+            trailStartTime = null;
+            document.getElementById('btnRun').classList.remove('active');
+            document.getElementById('btnRunText').textContent = 'RUN - MULAI ARSIR JALAN';
+
             document.getElementById('mapArea').classList.remove('show');
             document.getElementById('dataGrid').classList.remove('show');
             document.getElementById('btnNavigate').classList.remove('show');
+            document.getElementById('btnRunRow').classList.remove('show');
+            document.getElementById('trailStats').classList.remove('show');
             document.getElementById('distanceAlert').classList.remove('show');
             setStatus('STANDBY', false);
         }
@@ -665,6 +804,7 @@ Note    : If you copy or modify this code,
             document.getElementById('mapArea').classList.add('show');
             document.getElementById('dataGrid').classList.add('show');
             document.getElementById('btnNavigate').classList.add('show');
+            document.getElementById('btnRunRow').classList.add('show');
             setStatus('TRACKING', true);
 
             // Map
@@ -778,6 +918,43 @@ Note    : If you copy or modify this code,
                 firstLocUpdate = false;
                 mapInstance.fitBounds([[targetLat,targetLng],[uLat,uLng]],{padding:[50,50]});
             }
+
+            // === TRAIL RECORDING ===
+            if (trailRunning && mapInstance) {
+                const newPt = [uLat, uLng];
+                // Filter: hanya tambah jika jarak > 5m dari titik terakhir (hindari noise GPS)
+                let shouldAdd = true;
+                if (trailPoints.length > 0) {
+                    const lastPt = trailPoints[trailPoints.length - 1];
+                    const segDist = mapInstance.distance(lastPt, newPt);
+                    if (segDist < 5) shouldAdd = false;
+                    if (shouldAdd) trailTotalDist += segDist;
+                }
+                if (shouldAdd) {
+                    trailPoints.push(newPt);
+                    // Update polyline (garis utama tebal semi-transparan)
+                    if (!trailPolyline) {
+                        trailPolyline = L.polyline(trailPoints, {
+                            color: '#a78bfa', weight: 14, opacity: 0.35,
+                            lineCap: 'round', lineJoin: 'round'
+                        }).addTo(mapInstance);
+                        // Garis tengah tipis solid
+                        trailPolyline._innerLine = L.polyline(trailPoints, {
+                            color: '#c4b5fd', weight: 3, opacity: 0.8,
+                            lineCap: 'round', lineJoin: 'round'
+                        }).addTo(mapInstance);
+                    } else {
+                        trailPolyline.setLatLngs(trailPoints);
+                        trailPolyline._innerLine.setLatLngs(trailPoints);
+                    }
+                    // Update stats
+                    const distStr = trailTotalDist > 1000
+                        ? (trailTotalDist/1000).toFixed(2)+' km'
+                        : Math.round(trailTotalDist)+' m';
+                    document.getElementById('trailDistance').textContent = distStr;
+                    document.getElementById('trailPoints').textContent = trailPoints.length;
+                }
+            }
         }
 
         function startGPS() {
@@ -792,6 +969,62 @@ Note    : If you copy or modify this code,
             watchId = navigator.geolocation.watchPosition(updateUserLocation, ()=>{},
                 { enableHighAccuracy:true, maximumAge:3000 }
             );
+        }
+        // === TRAIL CONTROLS ===
+        function toggleTrail() {
+            trailRunning = !trailRunning;
+            const btn = document.getElementById('btnRun');
+            const txt = document.getElementById('btnRunText');
+            if (trailRunning) {
+                btn.classList.add('active');
+                txt.textContent = 'RUNNING - MEREKAM JEJAK...';
+                document.getElementById('trailStats').classList.add('show');
+                if (!trailStartTime) trailStartTime = Date.now();
+                startTrailTimer();
+            } else {
+                btn.classList.remove('active');
+                txt.textContent = 'RUN - LANJUTKAN ARSIR';
+                stopTrailTimer();
+            }
+        }
+
+        function clearTrail() {
+            trailRunning = false;
+            stopTrailTimer();
+            // Hapus layer dari map
+            if (trailPolyline && mapInstance) {
+                mapInstance.removeLayer(trailPolyline);
+                if (trailPolyline._innerLine) mapInstance.removeLayer(trailPolyline._innerLine);
+            }
+            trailCircles.forEach(c => { if (mapInstance) mapInstance.removeLayer(c); });
+            // Reset state
+            trailPoints = [];
+            trailPolyline = null;
+            trailCircles = [];
+            trailTotalDist = 0;
+            trailStartTime = null;
+            // Reset UI
+            document.getElementById('btnRun').classList.remove('active');
+            document.getElementById('btnRunText').textContent = 'RUN - MULAI ARSIR JALAN';
+            document.getElementById('trailStats').classList.remove('show');
+            document.getElementById('trailDistance').textContent = '0 m';
+            document.getElementById('trailPoints').textContent = '0';
+            document.getElementById('trailTime').textContent = '00:00';
+        }
+
+        function startTrailTimer() {
+            stopTrailTimer();
+            trailTimerInterval = setInterval(() => {
+                if (!trailStartTime) return;
+                const elapsed = Math.floor((Date.now() - trailStartTime) / 1000);
+                const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                const ss = String(elapsed % 60).padStart(2, '0');
+                document.getElementById('trailTime').textContent = `${mm}:${ss}`;
+            }, 1000);
+        }
+
+        function stopTrailTimer() {
+            if (trailTimerInterval) { clearInterval(trailTimerInterval); trailTimerInterval = null; }
         }
     </script>
 </body>
